@@ -1,13 +1,15 @@
 import cv2
-from PIL import Image
-from scipy.ndimage.filters import gaussian_filter
+import requests
 import numpy
 import pytesseract
+from PIL import Image
+from scipy.ndimage.filters import gaussian_filter
 from PIL import ImageFilter
 from os import remove
-import requests
+from bs4 import BeautifulSoup
 
 url = 'https://app1.susalud.gob.pe/registro/'
+url_sunat = 'https://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/'
 
 
 def make_request():
@@ -16,6 +18,34 @@ def make_request():
     get_img(s, captcha_url)
     txt_captcha = solve_captcha()
     petition(s, txt_captcha)
+
+
+def make_request_sunat():
+    s = requests.session()
+    captcha_url = url_sunat + 'captcha?accion=image&nmagic=9578'
+    get_img(s, captcha_url)
+    txt_captcha = solve_captcha()
+    petition_sunat(s, txt_captcha)
+
+
+def petition_sunat(s, txt_captcha):
+    post_data = {
+        'accion': 'consPorRuc',
+        'nroRuc': '20606100362',
+        'contexto': 'ti-it',
+        'modo': '1',
+        'rbtnTipo': '1',
+        'search1': '20606100362',
+        'tipdoc': '1',
+        'codigo': '%s' % txt_captcha[:-2]
+    }
+    post_url = url_sunat + 'jcrS03Alias'
+    r = s.post(post_url, data=post_data)
+    if 'Surgieron problemas al procesar la consulta por número de ruc.' not in r.text and txt_captcha.strip():
+        print('Data obtenida:')
+        print(r.text)
+    else:
+        print('Volviendo a intentar...')
 
 
 def petition(s, txt_captcha):
@@ -27,16 +57,25 @@ def petition(s, txt_captcha):
     }
     post_url = url + 'Home/ConsultaAfiliadoPersona'
     r = s.post(post_url, data=post_data)
-    print(r.text)
     if 'El texto de la imagen es incorrecto, intente nuevamente' not in r.text and txt_captcha.strip():
-        print('pasaste la prueba')
+        print('Data obtenida:')
+        scrapping_data(r)
     else:
-        print('vuelve a intentarlo')
+        print('Volviendo a intentar...')
         make_request()
+
+
+def scrapping_data(page):
+    soup = BeautifulSoup(page.content, 'html.parser')
+    data = list(soup.children)[0].get_text()
+    data_array = data.split(':')
+    name = data_array[1][1:]
+    print(name)
 
 
 def get_img(s, captcha_url):
     file_name = 'captcha.jpg'
+    # aqui necesitamos cookies o por los parametros quiza requiere algo mas
     captcha = s.get(captcha_url)
     f = open(file_name, 'wb')
     f.write(captcha.content)
@@ -71,10 +110,10 @@ def solve_captcha():
     remove('first_threshold.png')
     remove('blurred.png')
     remove('final.png')
-    print(text[:-2])
+    print(text)
     return text
 
 
 if __name__ == '__main__':
-    make_request()
+    make_request_sunat()
 
