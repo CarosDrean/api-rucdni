@@ -12,6 +12,23 @@ url = 'https://app1.susalud.gob.pe/registro/'
 url_sunat = 'https://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/'
 
 
+def test():
+    s = requests.session()
+    r = s.get('https://logincovid19.minsa.gob.pe/accounts/login/')
+    c = r.cookies.get_dict()
+    print(c)
+    headers = {'X-CSRFToken': '%s' % c['csrftoken']}
+    data = {
+        'username': '22102135',
+        'password': 'HOLO2020'
+    }
+    r = s.post('https://logincovid19.minsa.gob.pe/accounts/login/', data=data, headers=headers)
+    print(r.cookies.get_dict())
+    r = s.get('https://siscovid.minsa.gob.pe/static/js/paciente/buscar.js')
+    r = s.get('https://siscovid.minsa.gob.pe/crear/?tipo=01&numero=76738571')
+    print(r.text)
+
+
 def make_request():
     s = requests.session()
     captcha_url = url + 'Home/GeneraCaptcha'
@@ -115,5 +132,6 @@ def solve_captcha():
 
 
 if __name__ == '__main__':
-    make_request_sunat()
+    test()
+    # make_request_sunat()
 
